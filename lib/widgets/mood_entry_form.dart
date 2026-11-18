@@ -20,15 +20,62 @@ class _MoodEntryFormState extends State<MoodEntryForm> {
   // TODO 1.3: Declare the selected score. It starts with nothing selected:
   //   int? _score;
 
+  int? _score;
+
+  String? _error;
+
+
   // TODO 2.1: Declare a TextEditingController for the note. Override
   //   dispose() and call _noteController.dispose() before super.dispose().
   //   Why does a controller need disposing when an int does not?
+
+  final TextEditingController _noteController = TextEditingController();
+
+  @override
+  void dispose() {
+    _noteController.dispose();
+    super.dispose();
+  }
 
   // TODO 2.3: Write a _save() method that:
   //   1. creates a MoodEntry with the selected score, the trimmed note
   //      (or null if the trimmed note is empty) and DateTime.now()
   //   2. passes the entry to widget.onSubmit
   //   3. clears the form: no score selected and an empty note
+
+void _save() {
+  final score = _score;
+  final trimmed = _noteController.text.trim();
+
+  if (score == null) {
+    setState(() {
+      _error = 'Choose a score from 1 to 10';
+    });
+    return;
+  }
+
+  if (trimmed.length > maxNoteLength) {
+    setState(() {
+      _error = 'Note must be at most $maxNoteLength characters';
+    });
+    return;
+  }
+
+  widget.onSubmit(
+    MoodEntry(
+      score: score,
+      note: trimmed.isEmpty ? null : trimmed,
+      createdAt: DateTime.now(),
+    ),
+  );
+
+  setState(() {
+    _score = null;
+    _error = null;
+  });
+  _noteController.clear();
+}
+
 
   @override
   Widget build(BuildContext context) {
@@ -46,13 +93,45 @@ class _MoodEntryFormState extends State<MoodEntryForm> {
             // TODO 1.3 (continued): Pass _score instead of null. In
             //   onChanged, store the tapped score inside setState(() { ... }).
             //   Then try it without setState. What happens, and why?
-            MoodScoreSelector(selectedScore: null, onChanged: (_) {}),
+
+          
+            MoodScoreSelector(selectedScore: _score, onChanged: (score) {
+              setState(() {
+                _score = score;
+              });
+            }),
+
+            
             // TODO 2.2: Add a TextField for the note that uses your
             //   controller, labelled 'Note (optional)' (InputDecoration).
+
+            TextField(
+              controller: _noteController,
+              decoration: const InputDecoration(
+                labelText: 'Note (optional)',
+              ),
+            ),
+
+
+           if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(_error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
+            
             //
             // TODO 2.3 (continued): Add a FilledButton labelled 'Save entry'
             //   that calls _save. While no score is selected, pass
             //   onPressed: null so that the button is disabled.
+
+            
+          
+            FilledButton(
+              onPressed: _save,
+              child: const Text('Save entry'),
+            ),
           ],
         ),
       ),
