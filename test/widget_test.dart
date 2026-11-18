@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mood_tracker/data/sample_entries.dart';
 import 'package:mood_tracker/main.dart';
 import 'package:mood_tracker/widgets/mood_card.dart';
+import 'package:mood_tracker/models/mood_entry.dart';
+
 
 // Self-check for Lab 4, Exercises 1 and 2. Run it with: flutter test
 //
@@ -21,15 +23,16 @@ Future<void> pumpApp(WidgetTester tester) async {
 Finder get saveButton => find.widgetWithText(FilledButton, 'Save entry');
 
 void main() {
-  testWidgets('Save is disabled until a score is chosen', (tester) async {
+
+  testWidgets('Save without a score shows an error and adds nothing',
+      (tester) async {
     await pumpApp(tester);
 
-    expect(tester.widget<FilledButton>(saveButton).onPressed, isNull);
-
-    await tester.tap(find.widgetWithText(ChoiceChip, '3'));
+    await tester.tap(saveButton);
     await tester.pump();
 
-    expect(tester.widget<FilledButton>(saveButton).onPressed, isNotNull);
+    expect(find.text('Choose a score from 1 to 10'), findsOneWidget);
+    expect(find.byType(MoodCard), findsNWidgets(sampleEntries.length));
   });
 
   testWidgets('saving an entry puts it at the top of the history',
@@ -50,5 +53,49 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('a note of exactly the maximum length is accepted',
+      (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, '5'));
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), 'a' * maxNoteLength);
+    await tester.tap(saveButton);
+    await tester.pump();
+
+    expect(find.byType(MoodCard), findsNWidgets(sampleEntries.length + 1));
+  });
+
+  testWidgets('a note one character too long shows an error and adds nothing',
+      (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, '5'));
+    await tester.pump();
+    await tester.enterText(find.byType(TextField), 'a' * (maxNoteLength + 1));
+    await tester.tap(saveButton);
+    await tester.pump();
+
+    expect(find.text('Note must be at most $maxNoteLength characters'),
+        findsOneWidget);
+    expect(find.byType(MoodCard), findsNWidgets(sampleEntries.length));
+  });
+
+  testWidgets('the error disappears after a successful save', (tester) async {
+    await pumpApp(tester);
+
+    await tester.tap(saveButton);
+    await tester.pump();
+    expect(find.text('Choose a score from 1 to 10'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(ChoiceChip, '5'));
+    await tester.pump();
+    await tester.tap(saveButton);
+    await tester.pump();
+
+    expect(find.text('Choose a score from 1 to 10'), findsNothing);
+    expect(find.byType(MoodCard), findsNWidgets(sampleEntries.length + 1));
   });
 }
